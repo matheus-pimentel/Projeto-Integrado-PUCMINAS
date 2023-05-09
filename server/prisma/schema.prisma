@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator erd {
+  provider = "prisma-erd-generator"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  email    String @unique
+  googleId String @unique
+  imageUrl String
+
+  accounts        Account[]
+  categories      Category[]
+  movements       Movement[]
+  goals           Goal[]
+  accesses        Access[]
+  userPreferences UserPreferences?
+}
+
+model UserPreferences {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  theme  String
+  userId String @unique @db.ObjectId
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Institution {
+  id       String    @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  image    String
+  color    String
+  accounts Account[]
+}
+
+model Account {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  institutionId  String   @db.ObjectId
+  initialValue   Float
+  totalValue     Float
+  dateTotalValue DateTime
+  userId         String   @db.ObjectId
+
+  user        User        @relation(fields: [userId], references: [id])
+  institution Institution @relation(fields: [institutionId], references: [id])
+  movements   Movement[]
+
+  @@unique([userId, name])
+}
+
+model Category {
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  name    String
+  type    String
+  color   String
+  userId  String? @db.ObjectId
+  groupId String  @db.ObjectId
+
+  group CategoryGroup @relation(fields: [groupId], references: [id])
+
+  user              User?               @relation(fields: [userId], references: [id])
+  categoryMovements Movement[]
+  goals             CategoriesOnGoals[]
+}
+
+model CategoryGroup {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  categories Category[]
+}
+
+model Movement {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  value       Float
+  date        DateTime @default(now())
+  month       String
+  accountId   String   @db.ObjectId
+  userId      String   @db.ObjectId
+  categoryId  String   @db.ObjectId
+  observation String?  @db.ObjectId
+
+  account Account @relation(fields: [accountId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  category Category @relation(fields: [categoryId], references: [id])
+}
+
+model Goal {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  value  Float
+  type   String
+  userId String @db.ObjectId
+
+  user       User                @relation(fields: [userId], references: [id])
+  categories CategoriesOnGoals[]
+}
+
+model CategoriesOnGoals {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  goal       Goal     @relation(fields: [goalId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+  goalId     String   @db.ObjectId
+  categoryId String   @db.ObjectId
+
+  @@unique([goalId, categoryId])
+}
+
+model Access {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  creationDate DateTime @default(now())
+  updateDate   DateTime @default(now())
+  ipAddress    String
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String   @db.ObjectId
+}
